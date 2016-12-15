@@ -1,0 +1,3 @@
+rootProject.name = 'ReactNativeCognitoDemo'
+
+include ':app'
