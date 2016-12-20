@@ -22,12 +22,12 @@ export const types = {
     SIGNUP_RESPONSE: 'SIGNUP_RESPONSE',
     CONFIRM_SIGNUP_REQUEST: 'CONFIRM_SIGNUP_REQUEST',
     CONFIRM_SIGNUP_RESPONSE: 'CONFIRM_SIGNUP_RESPONSE',
-    RESET_PASSWORD_REQUEST: 'RESET_PASSWORD_REQUEST',
-    RESET_PASSWORD_RESPONSE: 'RESET_PASSWORD_RESPONSE',
+    GET_SESSION_REQUEST: 'GET_SESSION_REQUEST',
+    GET_SESSION_RESPONSE: 'GET_SESSION_RESPONSE',
+    CONFIRM_FORGOT_PASSWORD_REQUEST: 'CONFIRM_FORGOT_PASSWORD_REQUEST',
+    CONFIRM_FORGOT_PASSWORD_RESPONSE: 'CONFIRM_FORGOT_PASSWORD_RESPONSE',
     FORGOT_PASSWORD_REQUEST: 'FORGOT_PASSWORD_REQUEST',
     FORGOT_PASSWORD_RESPONSE: 'FORGOT_PASSWORD_RESPONSE',
-    AUTHENTICATE_REQUEST: 'AUTHENTICATE_REQUEST',
-    AUTHENTICATE_RESPONSE: 'AUTHENTICATE_RESPONSE',
     LOGOUT: 'LOGOUT',
     NAVIGATE_TO: 'NAVIGATE_TO',
     SET_CREDENTIALS_EMAIL: 'SET_CREDENTIALS_EMAIL',
@@ -37,6 +37,21 @@ export const types = {
 
 RNCognitoIdentity.initWithOptions(awsConfig.region, awsConfig.user_pool_id, awsConfig.client_id);
 
+// TODO: Enumerate errors, internationalize
+normalizeAWSException = (exception) => {
+    if ('userInfo' in exception) {
+        if ('__type' in exception.userInfo) {
+            return {code: exception.userInfo.__type, text: exception.userInfo.message};
+        }
+    }
+    return {code: "UnknownError", text: "An unknown error occurred"};
+}
+
+// TODO: Internationalize
+normalizeErrorMessage = (message) => {
+    return {code: "UnknownError", text: message}
+}
+
 export const actionCreators = {
     retrieveCredentialsFromLocalStorageAndTryToLogin: () => async(dispatch, getState) => {
         dispatch({ type: types.START_CREDENTIALS_RETRIEVAL_FROM_LOCAL_STORAGE_AND_TRY_LOGIN });
@@ -45,19 +60,18 @@ export const actionCreators = {
             const password = await AsyncStorage.getItem('@DemoApp:password');
             if (email && password && email !== '' && password !== '') {
                 try {
-                    var session = await RNCognitoIdentity.authenticateUserAsync(email, password);
+                    var session = await RNCognitoIdentity.getSession(email, password);
                     console.log("The idToken: " + session["idToken"]);
                     console.log("The accessToken: " + session["accessToken"]);
                     console.log("The refreshToken: " + session["refreshToken"]);
                     console.log("The expirationTime: " + session["expirationTime"]); //iOS only
-                    dispatch({ type: types.COMPLETED_CREDENTIALS_RETRIEVAL_FROM_LOCAL_STORAGE_AND_TRY_LOGIN, payload: session, email: email, password: password })
+                    dispatch({ type: types.COMPLETED_CREDENTIALS_RETRIEVAL_FROM_LOCAL_STORAGE_AND_TRY_LOGIN, session: session, email: email, password: password })
                 } catch(e) {
-                    dispatch({ type: types.COMPLETED_CREDENTIALS_RETRIEVAL_FROM_LOCAL_STORAGE_AND_TRY_LOGIN, payload: e, email: email, password: password })
+                    dispatch({ type: types.COMPLETED_CREDENTIALS_RETRIEVAL_FROM_LOCAL_STORAGE_AND_TRY_LOGIN, error: normalizeAWSException(e), email: email, password: password })
                 }
             } else {
                 dispatch({ type: types.COMPLETED_CREDENTIALS_RETRIEVAL_FROM_LOCAL_STORAGE_AND_TRY_LOGIN, email: email, password: password });
             }
-
         } catch(e) {
             dispatch({ type: types.COMPLETED_CREDENTIALS_RETRIEVAL_FROM_LOCAL_STORAGE_AND_TRY_LOGIN, email: '', password: '' });
         }
@@ -69,17 +83,17 @@ export const actionCreators = {
             const signupResponse = await RNCognitoIdentity.signUp(email, password);
             result = await AsyncStorage.setItem('@DemoApp:email', email);
             result = await AsyncStorage.setItem('@DemoApp:password', password);
-            dispatch({type: types.SIGNUP_RESPONSE, payload: signupResponse, email: email, password: password});
+            dispatch({type: types.SIGNUP_RESPONSE, error: null});
         } catch (e) {
-            dispatch({type: types.SIGNUP_RESPONSE, payload: e, error: true});
+            dispatch({type: types.SIGNUP_RESPONSE, error: normalizeAWSException(e)});
         }
     },
 
     login: (email, password) => async (dispatch, getState) => {
-        dispatch({ type: types.AUTHENTICATE_REQUEST })
+        dispatch({ type: types.GET_SESSION_REQUEST })
 
         try {
-            var session = await RNCognitoIdentity.authenticateUserAsync(email, password);
+            var session = await RNCognitoIdentity.getSession(email, password);
             result = await AsyncStorage.setItem('@DemoApp:email', email);
             result = await AsyncStorage.setItem('@DemoApp:password', password);
             console.log("The idToken: " + session["idToken"]);
@@ -87,18 +101,18 @@ export const actionCreators = {
             console.log("The refreshToken: " + session["refreshToken"]);
             console.log("The expirationTime: " + session["expirationTime"]); //iOS only
 
-            dispatch({ type: types.AUTHENTICATE_RESPONSE, payload: session, email: email, password: password })
+            dispatch({ type: types.GET_SESSION_RESPONSE, error: null, session: session, email: email, password: password })
         } catch (e) {
-            dispatch({ type: types.AUTHENTICATE_RESPONSE, payload: e, error: true })
+            dispatch({ type: types.GET_SESSION_RESPONSE, error: normalizeAWSException(e) })
         }
     },
     logout: (email) => async(dispatch, getState) => {
         try {
             result = await AsyncStorage.setItem('@DemoApp:password', '');
             RNCognitoIdentity.logout(email);
-            dispatch({ type: types.LOGOUT, password: '' });
+            dispatch({ type: types.LOGOUT, error: null, password: '' });
         } catch(e) {
-            dispatch({ type: types.LOGOUT, payload: e, error: true });
+            dispatch({ type: types.LOGOUT, error: normalizeAWSException(e) });
         }
     },
     navigateTo: (screen) => async(dispatch, getState) => {
@@ -110,12 +124,12 @@ export const actionCreators = {
             result = await RNCognitoIdentity.forgotPassword(email);
             if (result === email) {
                 result = await AsyncStorage.setItem('@DemoApp:password', '');
-                dispatch({ type: types.FORGOT_PASSWORD_RESPONSE, password: '' });
+                dispatch({ type: types.FORGOT_PASSWORD_RESPONSE });
             } else {
-                dispatch({ type: types.FORGOT_PASSWORD_RESPONSE, payload: "Server did not forget the user", error: true });
+                dispatch({ type: types.FORGOT_PASSWORD_RESPONSE, error: "Unable to send forgotten password to server. Try again later." });
             }
         } catch(e) {
-            dispatch({ type: types.FORGOT_PASSWORD_RESPONSE, payload: e, error: true });
+            dispatch({ type: types.FORGOT_PASSWORD_RESPONSE, error: normalizeAWSException(e) });
         }
     },
     confirmSignUp: (email, verificationCode) => async(dispatch, getState) => {
@@ -125,152 +139,137 @@ export const actionCreators = {
             if (result === email) {
                 dispatch({ type: types.CONFIRM_SIGNUP_RESPONSE });
             } else {
-                dispatch({ type: types.CONFIRM_SIGNUP_RESPONSE, payload: "Something went wrong. Try again", error: true });
+                dispatch({ type: types.CONFIRM_SIGNUP_RESPONSE, error: normalizeErrorMessage("Something went wrong. Try again") });
             }
         } catch(e) {
-            dispatch({ type: types.CONFIRM_SIGNUP_RESPONSE, payload: e, error: true });
+            dispatch({ type: types.CONFIRM_SIGNUP_RESPONSE, error: normalizeAWSException(e) });
         }
     },
-    reset: (email, verificationCode, password) => async(dispatch, getState) => {
-        dispatch({ type: types.RESET_PASSWORD_REQUEST })
+    confirmForgotPassword: (email, verificationCode, password) => async(dispatch, getState) => {
+        dispatch({ type: types.CONFIRM_FORGOT_PASSWORD_REQUEST })
         try {
             result = await RNCognitoIdentity.confirmForgotPassword(email, password, verificationCode);
             if (result === email) {
                 result = await AsyncStorage.setItem('@DemoApp:password', password);
-                dispatch({ type: types.RESET_PASSWORD_RESPONSE, password: password, email: email });
+                dispatch({ type: types.CONFIRM_FORGOT_PASSWORD_RESPONSE, email: email, password: password });
             } else {
-                dispatch({ type: types.RESET_PASSWORD_RESPONSE, payload: "Something went wrong. Try again", error: true });
+                dispatch({ type: types.CONFIRM_FORGOT_PASSWORD_RESPONSE, error: normalizeErrorMessage("Something went wrong. Try again") });
             }
         } catch(e) {
-            dispatch({ type: types.RESET_PASSWORD_RESPONSE, payload: e, error: true });
+            dispatch({ type: types.CONFIRM_FORGOT_PASSWORD_RESPONSE, error: normalizeAWSException(e) });
         }
     },
     setEmail: (email) => (dispatch, getState) => {
-        console.log("issued new email");
         dispatch({ type: types.SET_CREDENTIALS_EMAIL, email: email });
     },
     setPassword: (password) => (dispatch, getState) => {
-        console.log("issued new password");
         dispatch({ type: types.SET_CREDENTIALS_PASSWORD, password: password });
     },
     setVerificationCode: (code) => (dispatch, getState) => {
-        console.log("issued new password");
         dispatch({ type: types.SET_CREDENTIALS_VERIFICATION_CODE, verificationCode: code });
     }
 }
 
 const initialState = {
     loading: true,
-    error: false,
+    error: null,
     email: null,
     verificationCode: null,
     password: null,
     session: null,
-    message: null,
     loginStep: loginSteps.LOGIN,
 }
 
 export const reducer = (state = initialState, action) => {
-    const {type, payload, error, position, viewport} = action;
+    console.log("reducing with action " + action.type);
 
-    console.log("reducing with action " + type);
-
-    switch (type) {
+    switch (action.type) {
         case types.SIGNUP_REQUEST: {
-            return {...state, loading: true, error: false }
+            return {...state, loading: true, error: null }
         }
         case types.SIGNUP_RESPONSE: {
-            const {email, password} = action
+            const {error} = action
             if (error) {
-                console.log("SIGNUP_RESPONSE error occured: " + payload)
-                if (payload.userInfo.__type === "NotAuthorizedException") {
-                    return {...state, loading: false, error: true, message: "Email address or password are not allowed." }
-                } else if (payload.userInfo.__type === "UsernameExistsException") {
-                    return {...state, loading: false, error: true, message: "This email address has already been registered."}
-                }
-                return {...state, loading: false, error: true }
+                // Typically NotAuthorizedException or UsernameExistsException
+                return {...state, loading: false, error: error }
             } else {
-                return {...state, loading: false, error: false, session: payload, loginStep: loginSteps.CONFIRM_SIGNUP}
+                return {...state, loading: false, error: null, loginStep: loginSteps.CONFIRM_SIGNUP}
             }
         }
         case types.CONFIRM_SIGNUP_REQUEST: {
-            return {...state, loading: true, error: false }
+            return {...state, loading: true, error: null }
         }
         case types.CONFIRM_SIGNUP_RESPONSE: {
+            const {error} = action
             if (error) {
-                console.log("CONFIRM_SIGNUP_RESPONSE error occured: " + payload)
-                if (payload.userInfo.__type === "LimitExceededException") {
-                    return {...state, loading: false, error: true, message: "Password reset rate limit exceeded. Try again later." }
-                } else {
-                    return {...state, loading: false, error: true, message: "An unknown error occured" }
-                }
+                // Only seen LimitExceededException so far
+                return {...state, loading: false, error: error }
             } else {
-                return {...state, loading: false, error: false, verificationCode: '', loginStep: loginSteps.LOGIN}
+                return {...state, loading: false, error: null, verificationCode: '', loginStep: loginSteps.LOGIN}
             }
         }
-        case types.AUTHENTICATE_REQUEST: {
-            return {...state, loading: true, error: false }
+        case types.GET_SESSION_REQUEST: {
+            return {...state, loading: true, error: null }
         }
-        case types.AUTHENTICATE_RESPONSE: {
-            const {email, password} = action
+        case types.GET_SESSION_RESPONSE: {
+            const {session, error} = action
             if (error) {
-                console.log("AUTHENTICATE_RESPONSE error occured: " + payload)
-                if (payload.userInfo.__type === "NotAuthorizedException") {
-                    return {...state, loading: false, error: true, message: "Email address or password incorrect." }
-                } else {
-                    return {...state, loading: false, error: true, message: "An unknown error occured" }
-                }
-                return {...state, loading: false, error: true }
+                // Typically: NotAuthorizedException
+                return {...state, loading: false, error: error, session: null }
             } else {
-                return {...state, loading: false, error: false, session: payload, loginStep: loginSteps.LOGGEDIN}
+                return {...state, loading: false, error: null, session: session, loginStep: loginSteps.LOGGEDIN}
             }
         }
         case types.FORGOT_PASSWORD_REQUEST: {
-            return {...state, loading: true, error: false }
+            return {...state, loading: true, error: null }
         }
         case types.FORGOT_PASSWORD_RESPONSE: {
+            const {error} = action
             if (error) {
-                console.log("FORGOT_PASSWORD_RESPONSE error occured: " + payload)
-                if (payload.userInfo.__type === "LimitExceededException") {
-                    return {...state, loading: false, error: true, message: "Password reset rate limit exceeded. Try again later." }
-                } else {
-                    return {...state, loading: false, error: true, message: "An unknown error occured" }
-                }
+                // Only seen LimitExceededException so far
+                return {...state, loading: false, error: error }
             } else {
-                return {...state, loading: false, error: false, password: '', loginStep: loginSteps.ENTER_CODE}
+                return {...state, loading: false, error: null, password: '', loginStep: loginSteps.ENTER_CODE}
             }
         }
-        case types.RESET_PASSWORD_REQUEST: {
-            return {...state, loading: true, error: false }
+        case types.CONFIRM_FORGOT_PASSWORD_REQUEST: {
+            return {...state, loading: true, error: null }
         }
-        case types.RESET_PASSWORD_RESPONSE: {
+        case types.CONFIRM_FORGOT_PASSWORD_RESPONSE: {
+            const {error} = action
             if (error) {
-                console.log("RESET_PASSWORD_RESPONSE error occured: " + payload)
-                if (payload.userInfo.__type === "LimitExceededException") {
-                    return {...state, loading: false, error: true, message: "Password reset rate limit exceeded. Try again later." }
-                } else {
-                    return {...state, loading: false, error: true, message: "An unknown error occured" }
-                }
+                // Only seen LimitExceededException so far
+                return {...state, loading: false, error: error }
             } else {
-                return {...state, loading: false, error: false, loginStep: loginSteps.LOGIN}
+                return {...state, loading: false, error: null, loginStep: loginSteps.LOGIN}
             }
         }
         case types.LOGOUT: {
-            return {...state, loading: false, session: null, password: '', loginStep: loginSteps.LOGIN}
+            const {error} = action
+            if (error) {
+                return {...state, loading: false, session: null, error: error, loginStep: loginSteps.LOGIN}
+            } else {
+                return {...state, loading: false, session: null, error: null, password: '', loginStep: loginSteps.LOGIN}
+            }
         }
         case types.NAVIGATE_TO: {
-            return {...state, loading: false, error: false, loginStep: action.screen }
+            return {...state, loading: false, error: null, loginStep: action.screen }
         }
         case types.START_CREDENTIALS_RETRIEVAL_FROM_LOCAL_STORAGE_AND_TRY_LOGIN: {
-            return {...state, loading: true, error: false }
+            return {...state, loading: true, error: null }
         }
         case types.COMPLETED_CREDENTIALS_RETRIEVAL_FROM_LOCAL_STORAGE_AND_TRY_LOGIN: {
-            const {email, password, error, payload } = action
+            const {email, password, error, session } = action
             if (error) {
-                console.log("COMPLETED_CREDENTIALS_RETRIEVAL_FROM_LOCAL_STORAGE_AND_TRY_LOGIN error occured: " + payload)
-                return {...state, loading: false, error: true }
+                return {...state, loading: false, error: error }
             } else {
-                return { ...state, email: email, password: password, loading: false, error: false, loginStep: loginSteps.LOGGEDIN  }
+                if (session) {
+                    // There is a session. We are logged in.
+                    return { ...state, email: email, password: password, session: session, loading: false, error: null, loginStep: loginSteps.LOGGEDIN  }
+                } else {
+                    // No session, probably empty credentials.
+                    return { ...state, email: email, password: password, loading: false, error: null, loginStep: loginSteps.LOGIN }
+                }
             }
         }
         case types.SET_CREDENTIALS_EMAIL: {

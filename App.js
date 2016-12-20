@@ -1,7 +1,5 @@
 import React, { Component } from 'react';
 import {
-    AppRegistry,
-    StyleSheet,
     Text,
     View
 } from 'react-native';
@@ -19,18 +17,14 @@ import { actionCreators, loginSteps } from './accountredux'
 class App extends Component {
     constructor(props) {
         super(props);
-        console.log("Constructor of App called");
         props.dispatch(actionCreators.retrieveCredentialsFromLocalStorageAndTryToLogin());
     }
 
     render() {
-        console.log("Rendering App");
         const {loginStep} = this.props
 
         if (loginStep === loginSteps.LOGIN) {
-            return (
-                <Login />
-            )
+            return (<Login />);
         } else if (loginStep === loginSteps.SIGNUP) {
             return (<Signup />);
         } else if (loginStep === loginSteps.CONFIRM_SIGNUP) {

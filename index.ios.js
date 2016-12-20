@@ -1,18 +1,6 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- * @flow
- */
-
 import React, { Component } from 'react';
-import {
-    AppRegistry,
-    View,
-    Text
-} from 'react-native';
+import { AppRegistry, View } from 'react-native';
 
-
-import { connect } from 'react-redux'
 import { createStore, applyMiddleware } from 'redux'
 import { Provider } from 'react-redux'
 import thunk from 'redux-thunk'
@@ -27,7 +15,6 @@ const store = createStore(reducer, composeWithDevTools(applyMiddleware(thunk)));
 
 class ReactNativeCognitoDemo extends Component {
     render() {
-        console.log("Rendering ReactNativeCognitoDemo");
         return (
             <Provider store={store}>
                 <View>
