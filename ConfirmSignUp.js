@@ -25,7 +25,7 @@ class ConfirmSignUp extends Component {
                     onChangeText={(code) => this.props.dispatch(actionCreators.setVerificationCode(code))}
                     value={this.props.verificationCode}
                     />
-                <Button style={styles.button} title="Confirm signup" onPress={this.confirmSignUp.bind(this)} />
+                <Button title="Confirm signup" onPress={this.confirmSignUp.bind(this)} />
             </View>
         );
     }

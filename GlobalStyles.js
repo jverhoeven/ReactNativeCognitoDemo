@@ -4,18 +4,16 @@ import { StyleSheet } from 'react-native';
 export default StyleSheet.create({
     container: {
         paddingHorizontal: 10,   
-        paddingVertical: 20,   
+        paddingVertical: 40,
     },
     label: {
         height: 20,
+        marginTop: 10,
     },
     input: {
-        height: 30,
+        height: 35,
         paddingHorizontal: 10,
         borderWidth: 1,
         borderColor: 'gray',
     },
-    button: {
-        height: 40,
-    }
 })

@@ -40,9 +40,9 @@ class Login extends Component {
                     onChangeText={(password) => this.props.dispatch(actionCreators.setPassword(password))}
                     value={this.props.password}
                     />
-                <Button style={styles.button} title="Login" onPress={this.login.bind(this)} />
-                <Button style={styles.button} title="Forgot password" onPress={this.forgot.bind(this)} />
-                <Button style={styles.button} title="Signup" onPress={this.signup.bind(this)} />
+                <Button title="Login" onPress={this.login.bind(this)} />
+                <Button title="Forgot password" onPress={this.forgot.bind(this)} />
+                <Button title="Signup" onPress={this.signup.bind(this)} />
             </View>
         );
     }

@@ -1,3 +1,6 @@
 rootProject.name = 'ReactNativeCognitoDemo'
 
-include ':app'
+include ':react-native-cognito-identity', ':app'
+// Use this setting when the react-native-cognito-identity has not been installed in the node_modules folder.
+//project(':react-native-cognito-identity').projectDir = new File(rootProject.projectDir, '../../react-native-cognito-identity/android')
+project(':react-native-cognito-identity').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-cognito-identity/android')

@@ -37,14 +37,34 @@ export const types = {
 
 RNCognitoIdentity.initWithOptions(awsConfig.region, awsConfig.user_pool_id, awsConfig.client_id);
 
-// TODO: Enumerate errors, internationalize
+// AWS Exceptions are structured differently over Android/iOS.
+// TODO: Enumerate errors, internationalize. Move to native code.
+// Example exception in Android:
+//   code: "signup failed"
+//   message: "User does not exist. (Service: AmazonCognitoIdentityProvider; Status Code: 400; Error Code: UserNotFoundException; Request ID: 89446010-c6c7-11e6-85cb-6f24b97d329e)"
 normalizeAWSException = (exception) => {
+    let text = "An unknown error occurred";
+    let code = "UnknownError";
+    // Typical version from iOS:
     if ('userInfo' in exception) {
         if ('__type' in exception.userInfo) {
-            return {code: exception.userInfo.__type, text: exception.userInfo.message};
+            text = exception.userInfo.message;
+            code = exception.userInfo.__type;
+        }
+    } else if ('code' in exception && 'message' in exception) {
+        console.log("Raw Android exception.message: " + exception.message);
+        // Decode the message part of the exception in two parts: Message and code
+        const endMessagePos = exception.message.indexOf(" (Service: ");
+        if (endMessagePos > 0) {
+            text = exception.message.substring(0, endMessagePos);
+        }
+        const pos1 = exception.message.indexOf("Error Code: ");
+        const pos2 = exception.message.indexOf("; Request ID: ");
+        if (pos1 > 0 && pos2 > 0 && pos2 > pos1+16) {
+            code = exception.message.substring(pos1 + "Error Code: ".length, pos2);
         }
     }
-    return {code: "UnknownError", text: "An unknown error occurred"};
+    return {code: code, text: text};
 }
 
 // TODO: Internationalize

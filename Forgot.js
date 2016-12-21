@@ -22,7 +22,7 @@ class Forgot extends Component {
                     onChangeText={(email) => this.props.dispatch(actionCreators.setEmail(email))}
                     value={this.props.email}
                     />
-                <Button style={styles.button} title="Reset password" onPress={this.forgot.bind(this)} />
+                <Button title="Reset password" onPress={this.forgot.bind(this)} />
             </View>
         );
     }

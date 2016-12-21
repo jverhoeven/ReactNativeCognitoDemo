@@ -21,7 +21,7 @@ class LoggedIn extends Component {
         return (
             <View style={styles.container}>
                 <Message defaultMessage={"You are logged in as '" + this.props.email + "'"} />
-                <Button style={styles.button} title="Logout" onPress={this.logout.bind(this)} />
+                <Button title="Logout" onPress={this.logout.bind(this)} />
             </View>
         );
     }

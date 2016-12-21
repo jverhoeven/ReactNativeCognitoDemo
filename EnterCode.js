@@ -32,7 +32,7 @@ class EnterCode extends Component {
                     onChangeText={(password) => this.props.dispatch(actionCreators.setPassword(password))}
                     value={this.props.password}
                     />
-                <Button style={styles.button} title="Reset password" onPress={this.confirmForgotPassword.bind(this)} />
+                <Button title="Reset password" onPress={this.confirmForgotPassword.bind(this)} />
             </View>
         );
     }

@@ -42,9 +42,9 @@ class Signup extends Component {
                     onChangeText={(newPassword) => dispatch(actionCreators.setPassword(newPassword))}
                     value={password}
                     />
-                <Button style={styles.button} title="Signup" onPress={this.signup.bind(this)} />
-                <Button style={styles.button} title="I already received a code" onPress={this.confirmSignUp.bind(this)} />
-                <Button style={styles.button} title="Back" onPress={this.back.bind(this)} />
+                <Button title="Signup" onPress={this.signup.bind(this)} />
+                <Button title="I already received a code" onPress={this.confirmSignUp.bind(this)} />
+                <Button title="Back" onPress={this.back.bind(this)} />
             </View>
         );
     }
